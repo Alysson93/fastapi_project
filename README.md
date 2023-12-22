@@ -9,6 +9,7 @@ Com isso, espera-se trazer uma mostra didática da evolução e escalabilidade d
 ## Versões do projeto (por commit):
 
 1. Crud de produtos salvos em lista
+2. Crud de produtos salvos em arquivo
 
 
 ## Como rodar a aplicação?

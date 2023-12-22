@@ -3,47 +3,74 @@ from datetime import datetime
 from dtos.ProductDto import ProductCreate
 
 class ProductRepository():
-    __products = []
-
+    __file = 'src/files/products.txt'
+    
     @staticmethod
     def create(data: ProductCreate):
-        ProductRepository.__products.append(
-            {
-                'id': uuid4(),
-                'name': data.name,
-                'qtd': data.qtd,
-                'price': data.price,
-                'created_at': datetime.utcnow(),
-                'updated_at': datetime.utcnow(),
-            }
-        )
+        with open(ProductRepository.__file, 'a') as file:
+            file.write(
+                f'{uuid4()} | {data.name} | {data.qtd} | {data.price} | {datetime.utcnow()} | {datetime.utcnow()} \n'
+            )
 
     @staticmethod
     def read():
-        return ProductRepository.__products
+        with open(ProductRepository.__file, 'r') as file:
+            products = []
+            for line in file.readlines():
+                line = line[:-2]
+                line = line.split(' | ')
+                products.append({
+                    'id': line[0],
+                    'name': line[1],
+                    'qtd': int(line[2]),
+                    'price': float(line[3]),
+                    'created_at': line[4],
+                    'updated_at': line[5]
+                })
+            return products
 
     @staticmethod
     def read_by_id(id):
-        for product in ProductRepository.__products:
-            if product['id'] == id:
-                return product
+        with open(ProductRepository.__file, 'r') as file:
+            for line in file.readlines():
+                line = line[:-2]
+                line = line.split(' | ')
+                if line[0] == str(id):
+                    return {
+                        'id': line[0],
+                        'name': line[1],
+                        'qtd': int(line[2]),
+                        'price': float(line[3]),
+                        'created_at': line[4],
+                        'updated_at': line[5]  
+                    }
+
 
     @staticmethod
     def update(id, data: ProductCreate):
-        for key, product in enumerate(ProductRepository.__products):
-            if product['id'] == id:
-                ProductRepository.__products[key] = {
-                    'id': id,
-                    'name': data.name,
-                    'qtd': data.qtd,
-                    'price': data.price,
-                    'updated_at': datetime.utcnow(),
-                }
-                return True
+        product = ProductRepository.read_by_id(id)
+        if product == None:
+            return
+        with open(ProductRepository.__file, 'a') as file:
+            file.write(
+                f'{id} | {data.name} | {data.qtd} | {data.price} | {product['created_at']} | {datetime.utcnow()} \n'
+            )
+        ProductRepository.delete(id)
+        return True
 
     @staticmethod
     def delete(id):
-        for key, product in enumerate(ProductRepository.__products):
-            if product['id'] == id:
-                del ProductRepository.__products[key]
-                return True
+        cont = 0
+        product = ProductRepository.read_by_id(id)
+        if product == None:
+            return
+        products = ProductRepository.read()
+        with open(ProductRepository.__file, "w") as file:
+            for i in products:
+                if str(id) == i['id'] and cont < 1:
+                    cont += 1
+                    continue
+                file.write(
+                    f'{i['id']} | {i['name']} | {i['qtd']} | {i['price']} | {i['created_at']} | {i['updated_at']} \n'
+                )
+            return True
