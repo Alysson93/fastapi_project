@@ -1,76 +1,64 @@
 from uuid import uuid4
 from datetime import datetime
 from dtos.ProductDto import ProductCreate
+from infra.db.dbconfig import get_db_connection
 
 class ProductRepository():
-    __file = 'src/files/products.txt'
+    conn = get_db_connection()
     
     @staticmethod
     def create(data: ProductCreate):
-        with open(ProductRepository.__file, 'a') as file:
-            file.write(
-                f'{uuid4()} | {data.name} | {data.qtd} | {data.price} | {datetime.utcnow()} | {datetime.utcnow()} \n'
-            )
+        with ProductRepository.conn as connection:
+            cursor = connection.cursor()
+            cursor.execute('''
+				INSERT INTO products(id, name, price, qtd)
+				VALUES (?, ?, ?, ?);
+			''', (str(uuid4()), data.name, data.price, data.qtd))
+            connection.commit()
+            return True
 
     @staticmethod
     def read():
-        with open(ProductRepository.__file, 'r') as file:
-            products = []
-            for line in file.readlines():
-                line = line[:-2]
-                line = line.split(' | ')
-                products.append({
-                    'id': line[0],
-                    'name': line[1],
-                    'qtd': int(line[2]),
-                    'price': float(line[3]),
-                    'created_at': line[4],
-                    'updated_at': line[5]
-                })
-            return products
+        products = None
+        with ProductRepository.conn as connection:
+            cursor = connection.cursor()
+            cursor.execute('''
+				SELECT * FROM products;
+			''')
+            products = cursor.fetchall()
+        return products
 
     @staticmethod
     def read_by_id(id):
-        with open(ProductRepository.__file, 'r') as file:
-            for line in file.readlines():
-                line = line[:-2]
-                line = line.split(' | ')
-                if line[0] == str(id):
-                    return {
-                        'id': line[0],
-                        'name': line[1],
-                        'qtd': int(line[2]),
-                        'price': float(line[3]),
-                        'created_at': line[4],
-                        'updated_at': line[5]  
-                    }
+        product = None
+        with ProductRepository.conn as connection:
+            cursor = connection.cursor()
+            cursor.execute('''
+                SELECT * FROM products WHERE id = ?
+			''', (str(id), ))
+            product = cursor.fetchone()
+        return product
 
 
     @staticmethod
     def update(id, data: ProductCreate):
-        product = ProductRepository.read_by_id(id)
-        if product == None:
-            return
-        with open(ProductRepository.__file, 'a') as file:
-            file.write(
-                f'{id} | {data.name} | {data.qtd} | {data.price} | {product['created_at']} | {datetime.utcnow()} \n'
-            )
-        ProductRepository.delete(id)
-        return True
+        with ProductRepository.conn as connection:
+            product = ProductRepository.read_by_id(id)
+            if product is None:
+                return
+            cursor = connection.cursor()
+            cursor.execute("UPDATE products SET name=?, price=?, qtd=?, updated_at=? WHERE id=?",
+                        (data.name, data.price, data.qtd, datetime.utcnow(), str(id)))
+            connection.commit()
+            return True
 
     @staticmethod
     def delete(id):
-        cont = 0
-        product = ProductRepository.read_by_id(id)
-        if product == None:
-            return
-        products = ProductRepository.read()
-        with open(ProductRepository.__file, "w") as file:
-            for i in products:
-                if str(id) == i['id'] and cont < 1:
-                    cont += 1
-                    continue
-                file.write(
-                    f'{i['id']} | {i['name']} | {i['qtd']} | {i['price']} | {i['created_at']} | {i['updated_at']} \n'
-                )
+        with ProductRepository.conn as connection:
+            product = ProductRepository.read_by_id(id)
+            if product is None:
+                return
+            cursor = connection.cursor()
+            cursor.execute("DELETE FROM products WHERE id=?", (str(id),))
+            connection.commit()
             return True

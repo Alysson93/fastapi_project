@@ -10,6 +10,7 @@ Com isso, espera-se trazer uma mostra didática da evolução e escalabilidade d
 
 1. Crud de produtos salvos em lista
 2. Crud de produtos salvos em arquivo
+3. Crud de produtos salvos em banco sqlite
 
 
 ## Como rodar a aplicação?
