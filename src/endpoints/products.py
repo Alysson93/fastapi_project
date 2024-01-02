@@ -9,12 +9,12 @@ from dtos.ProductDto import ProductCreate
 
 @router.get('/')
 async def read():
-    return ProductRepository.read()
+    return await ProductRepository.read()
 
 
 @router.get('/{id}')
 async def read_by_id(id: UUID):
-    product = ProductRepository.read_by_id(id)
+    product = await ProductRepository.read_by_id(id)
     if product is None:
         raise HTTPException(status_code=404, detail='Produto não encontrado')
     return product
@@ -22,19 +22,19 @@ async def read_by_id(id: UUID):
 
 @router.post('/', status_code=201)
 async def create(data: ProductCreate):
-    ProductRepository.create(data)
+    await ProductRepository.create(data)
     return {'msg': 'Produto cadastrado com sucesso'}
 
 
 @router.put('/{id}', status_code=204)
 async def update(id: UUID, data: ProductCreate):
-    product = ProductRepository.update(id, data)
+    product = await ProductRepository.update(id, data)
     if product is None:
         raise HTTPException(status_code=404, detail='Produto não encontrado')
 
 
 @router.delete('/{id}', status_code=204)
 async def delete(id: UUID):
-    product = ProductRepository.delete(id)
+    product = await ProductRepository.delete(id)
     if product is None:
         raise HTTPException(status_code=404, detail='Produto não encontrado')

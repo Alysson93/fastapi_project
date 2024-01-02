@@ -1,64 +1,70 @@
-from uuid import uuid4
 from datetime import datetime
+from uuid import uuid4
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import async_sessionmaker
 from dtos.ProductDto import ProductCreate
-from infra.db.dbconfig import get_db_connection
+from entities.Product import Product
+from infra.db.session import engine
 
 class ProductRepository():
-    conn = get_db_connection()
+    session = async_sessionmaker(
+        bind=engine,
+        expire_on_commit=False
+    )
     
     @staticmethod
-    def create(data: ProductCreate):
-        with ProductRepository.conn as connection:
-            cursor = connection.cursor()
-            cursor.execute('''
-				INSERT INTO products(id, name, price, qtd)
-				VALUES (?, ?, ?, ?);
-			''', (str(uuid4()), data.name, data.price, data.qtd))
-            connection.commit()
-            return True
+    async def create(data: ProductCreate):
+        async with ProductRepository.session() as session:
+            product = Product(
+                id=uuid4(),
+                name=data.name,
+                price=data.price,
+                qtd=data.qtd
+            )
+            session.add(product)
+            await session.commit()
 
     @staticmethod
-    def read():
-        products = None
-        with ProductRepository.conn as connection:
-            cursor = connection.cursor()
-            cursor.execute('''
-				SELECT * FROM products;
-			''')
-            products = cursor.fetchall()
-        return products
+    async def read():
+        async with ProductRepository.session() as session:
+            statement = select(Product).order_by(Product.id)
+            result = await session.execute(statement)
+            return result.scalars().all()
 
     @staticmethod
-    def read_by_id(id):
-        product = None
-        with ProductRepository.conn as connection:
-            cursor = connection.cursor()
-            cursor.execute('''
-                SELECT * FROM products WHERE id = ?
-			''', (str(id), ))
-            product = cursor.fetchone()
-        return product
+    async def read_by_id(id):
+        async with ProductRepository.session() as session:
+            statement = select(Product).filter(Product.id == id)
+            result = await session.execute(statement)
+            return result.scalar_one_or_none()
 
 
     @staticmethod
-    def update(id, data: ProductCreate):
-        with ProductRepository.conn as connection:
-            product = ProductRepository.read_by_id(id)
+    async def update(id, data: ProductCreate):
+        async with ProductRepository.session() as session:
+            product = await ProductRepository.read_by_id(id)
             if product is None:
                 return
-            cursor = connection.cursor()
-            cursor.execute("UPDATE products SET name=?, price=?, qtd=?, updated_at=? WHERE id=?",
-                        (data.name, data.price, data.qtd, datetime.utcnow(), str(id)))
-            connection.commit()
-            return True
+            stmt = (
+                 update(Product).
+                 where(Product.id == id).
+                 values(
+                      name = data.name,
+                      price = data.price,
+                      qtd = data.qtd,
+                      updated_at = datetime.utcnow()
+                 )
+            )
+            await session.execute(stmt)
+            await session.commit()  
+            return True 
 
     @staticmethod
-    def delete(id):
-        with ProductRepository.conn as connection:
-            product = ProductRepository.read_by_id(id)
+    async def delete(id):
+        async with ProductRepository.session() as session:
+            product = await ProductRepository.read_by_id(id)
             if product is None:
                 return
-            cursor = connection.cursor()
-            cursor.execute("DELETE FROM products WHERE id=?", (str(id),))
-            connection.commit()
+            await session.delete(product)
+            await session.commit()
             return True
