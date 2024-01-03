@@ -5,7 +5,12 @@ from fastapi import FastAPI
 
 app = FastAPI()
 
-@app.get('/')
+@app.get(
+    '/',
+    summary='Create, read, update and delete products',
+    description='Access the endpoints /products and do your tests',
+    response_description='This is a test response'
+)
 def root():
     return {'msg': 'Hello, World'}
 
